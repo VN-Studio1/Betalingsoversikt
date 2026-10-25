@@ -98,9 +98,33 @@ button{cursor:pointer}
 .card-h .s small{display:block;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0}
 .card-bar{height:6px;margin:0 16px 4px;border-radius:4px;background:var(--chip);overflow:hidden}
 .card-bar i{display:block;height:100%;border-radius:4px}
-.row{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:12px 16px;min-height:64px}
+.row{display:flex;align-items:center;gap:2px;padding:0 16px 0 8px}
 .row+.row{border-top:1px solid var(--line)}
-.row:active{background:var(--chip)}
+.rm{flex:1;min-width:0;display:flex;gap:12px;align-items:center;text-align:left;background:none;border:0;padding:12px 0;min-height:66px}
+.rm:active{opacity:.6}
+.chk{width:46px;height:46px;flex:0 0 auto;border:0;background:none;display:grid;place-items:center;padding:0}
+.chk span{width:30px;height:30px;border-radius:50%;border:2.5px solid var(--line);display:grid;place-items:center;transition:background .15s,border-color .15s,transform .15s}
+.chk svg{width:16px;height:16px;opacity:0;transition:opacity .15s}
+.chk[aria-pressed="true"] span{background:var(--good);border-color:var(--good);transform:scale(1.05)}
+.chk[aria-pressed="true"] svg{opacity:1}
+.row.paid .nm{text-decoration:line-through;text-decoration-thickness:2px;color:var(--muted)}
+.row.paid .r b{color:var(--good)}
+.row.paid .r small.pd{color:var(--good);font-weight:700}
+.done-card{opacity:.85}
+.done-card .rm{padding-left:8px}
+.prog-out{height:8px;background:rgba(255,255,255,.15);border-radius:5px;overflow:hidden;margin-top:10px}
+.prog-out i{display:block;height:100%;background:#7CE3B4;border-radius:5px;transition:width .5s}
+.out .paid-t{font-size:13px;color:var(--hero-muted);margin-top:6px}
+.out .paid-t b{color:#fff}
+.out-l{flex:1;min-width:0}
+#toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);font-weight:800;padding:13px 18px;border-radius:18px;z-index:20;transition:opacity .2s,transform .2s;max-width:calc(100vw - 32px);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.when{font-weight:700;color:var(--ink)}
+.when.soon{color:var(--warn)}
+.when.over{color:#D03535}
+.over-card{box-shadow:inset 0 0 0 2px #F3B4B4}
+.paid-card .sub-sum{color:var(--good)}
+.btn.donebtn{flex-basis:100%;background:var(--good-soft);color:var(--good)}
 .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;flex:0 0 auto;background:var(--chip)}
 .row .l{flex:1;min-width:0}
 .row .nm{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -191,6 +215,7 @@ dialog::backdrop{background:rgba(13,12,31,.55);backdrop-filter:blur(3px)}
   <p class="foot" id="saveStatus">Laster …</p>
 </div>
 
+<div id="toast" role="status" aria-live="polite"></div>
 <div class="bottom"><div class="tabbar" id="tabbar" role="tablist"><button role="tab" data-v="debt">💳 Gjeld</button><button role="tab" data-v="sub">🔁 Abonnementer</button></div><button class="add" id="addBtn" aria-label="Legg til"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
 
 <dialog id="dlg">
@@ -222,6 +247,7 @@ dialog::backdrop{background:rgba(13,12,31,.55);backdrop-filter:blur(3px)}
       </div>
     </div>
     <div class="field"><label for="fNote">Notat</label><textarea id="fNote" placeholder="Valgfritt"></textarea></div>
+    <div class="acts" style="margin-bottom:10px"><button type="button" class="btn donebtn" id="doneBtn">✓ Marker som ferdig betalt</button></div>
     <div class="acts">
       <button type="button" class="btn danger" id="delBtn">Slett</button>
       <button type="button" class="btn" id="cancelBtn">Avbryt</button>
@@ -299,9 +325,35 @@ function provColor(p){
   const provs=[...new Set(state.items.map(i=>(i.prov||"Annet").trim().toLowerCase()))].filter(x=>!KNOWN[x]);
   const idx=provs.indexOf(k); return PALETTE[(idx<0?0:idx+6)%PALETTE.length];
 }
+const YM=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")};
+const inMonth=i=>!i.done||i.doneAt===YM();
+const isPaid=i=>!!(i.paid&&i.paid[YM()]!==undefined);
+const CHECK=`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("on"),2600)}
+function togglePaid(id){
+  const it=state.items.find(i=>i.id===id); if(!it)return; const ym=YM(); it.paid=it.paid||{};
+  if(it.paid[ym]!==undefined){
+    if(it.type==="debt"){it.remaining=(+it.remaining||0)+(+it.paid[ym]||0); if(it.done&&it.doneAt===ym){it.done=false;delete it.doneAt}}
+    delete it.paid[ym];
+  }else{
+    if(it.type==="debt"){
+      const ded=Math.min(+it.monthly||0,+it.remaining||0); it.paid[ym]=ded; it.remaining=Math.max(0,(+it.remaining||0)-ded);
+      if((+it.original||0)===0&&ded>0&&!it.original) it.original=it.remaining+ded;
+      if(it.remaining<=0&&ded>0){it.done=true;it.doneAt=ym;toast(`🎉 ${it.name} er nedbetalt!`)} else toast(`✓ Betalt – ${kr(it.remaining*myShare(it))} igjen`);
+    }else{it.paid[ym]=+it.monthly||0; toast(`✓ ${it.name} betalt for ${monthName()}`)}
+  }
+  save(); render();
+}
+function paidStats(){
+  let paid=0,total=0; const ym=YM();
+  for(const it of state.items.filter(inMonth)){ if(!inView(it))continue; const s=myShare(it);
+    const amt=it.paid&&it.paid[ym]!==undefined?(+it.paid[ym]||0):(+it.monthly||0);
+    total+=amt*s; if(isPaid(it)) paid+=amt*s; }
+  return {paid,total};
+}
 function totals(){
   let monthlyMine=0,monthlyAll=0,debtMine=0,owed=0,subs=0,count=0;
-  for(const it of state.items){
+  for(const it of state.items.filter(inMonth)){
     const m=+it.monthly||0,s=myShare(it); count++;
     monthlyAll+=m; monthlyMine+=m*s;
     if(it.type==="sub") subs+=m*s;
@@ -340,7 +392,7 @@ function render(){
   document.querySelector(".app").className="app v-"+view;
   document.querySelectorAll("#tabbar button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===view?"true":"false"));
   if(view==="debt") renderDebtHero(); else renderSubHero();
-  renderTip(); renderNext(); renderFilters(); renderList();
+  renderTip(); $("nextSec").hidden=true; renderFilters(); renderList();
 }
 const gear=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
 const monthName=()=>new Date().toLocaleDateString("nb-NO",{month:"long"});
@@ -358,12 +410,14 @@ function heroDone(h){
 }
 function outBox(t){
   const left=state.income>0?state.income-t.monthlyMine:null;
-  return `<div class="out"><div><div class="k">Totalt utgående i ${monthName()}</div><div class="v">${kr(t.monthlyMine)}</div></div>
-    ${left!==null?`<span class="badge">${left>=0?"Igjen":"Mangler"}: ${kr(Math.abs(left))}</span>`:""}</div>`;
+  const ps=paidStats(), pct=ps.total?Math.round(ps.paid/ps.total*100):0;
+  return `<div class="out" style="flex-wrap:wrap"><div class="out-l"><div class="k">Totalt utgående i ${monthName()}</div><div class="v">${kr(t.monthlyMine)}</div></div>
+    ${left!==null?`<span class="badge">${left>=0?"Igjen":"Mangler"}: ${kr(Math.abs(left))}</span>`:""}
+    ${ps.total?`<div style="flex-basis:100%"><div class="prog-out"><i style="width:${pct}%"></i></div><div class="paid-t">${pct===100?"🎉 Alt er betalt denne måneden":`Betalt <b>${kr(ps.paid)}</b> av ${kr(ps.total)} ${view==="debt"?"til gjeld":"i abonnementer og faste"}`}</div></div>`:""}</div>`;
 }
 function renderDebtHero(){
   const t=totals(), h=$("hero"); h.className="hero";
-  const debts=state.items.filter(i=>i.type==="debt");
+  const debts=state.items.filter(i=>i.type==="debt"&&inMonth(i));
   const by={}; for(const it of debts){const r=(+it.remaining||0)*myShare(it); if(r>0){const p=(it.prov||"Annet").trim(); by[p]=(by[p]||0)+r;}}
   const entries=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([p,v])=>[p,v,provColor(p)]);
   const pay=debts.reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
@@ -380,7 +434,7 @@ function renderDebtHero(){
 }
 function renderSubHero(){
   const t=totals(), h=$("hero"); h.className="hero subs";
-  const its=state.items.filter(i=>i.type!=="debt");
+  const its=state.items.filter(i=>i.type!=="debt"&&inMonth(i));
   const subs=its.filter(i=>i.type==="sub").reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
   const fixed=its.filter(i=>i.type==="fixed").reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
   const entries=its.map(i=>[i.name||i.prov||"Annet",(+i.monthly||0)*myShare(i),provColor(i.prov||i.name)]).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
@@ -401,7 +455,7 @@ function countUp(){
   requestAnimationFrame(step);
 }
 function renderNext(){
-  const withDay=state.items.filter(i=>inView(i)&&+i.day>=1&&+i.monthly>0&&!(i.shared&&i.payer==="partner"));
+  const withDay=state.items.filter(i=>inView(i)&&!i.done&&!isPaid(i)&&+i.day>=1&&+i.monthly>0&&!(i.shared&&i.payer==="partner"));
   const sec=$("nextSec"); if(!withDay.length){sec.hidden=true;return} sec.hidden=false;
   const now=new Date(),today=now.getDate(),dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
   const rows=withDay.map(i=>{const d=Math.min(+i.day,dim);const dist=d>=today?d-today:d+dim-today;return{i,d,dist}}).sort((a,b)=>a.dist-b.dist);
@@ -410,7 +464,7 @@ function renderNext(){
   $("next").innerHTML=rows.slice(0,10).map(({i,d,dist})=>`<div class="nx ${dist<=3?"soon":""}" style="background:${provColor(i.prov||i.name)}"><div class="d">${d}.</div><div class="when">${dist===0?"I dag":dist===1?"I morgen":`Om ${dist} dager`}</div><div class="n">${esc(i.name)}</div><div class="a">${kr(i.monthly)}</div></div>`).join("");
 }
 function renderTip(){
-  const hi=view==="debt"&&state.items.filter(i=>i.type==="debt"&&(+i.rate||0)>=15&&(+i.remaining||0)>0).sort((a,b)=>(+b.rate)-(+a.rate))[0];
+  const hi=view==="debt"&&state.items.filter(i=>i.type==="debt"&&!i.done&&(+i.rate||0)>=15&&(+i.remaining||0)>0).sort((a,b)=>(+b.rate)-(+a.rate))[0];
   $("tipWrap").innerHTML=hi?`<div class="tip"><span class="e">🔥</span><div><b>Dyrest først:</b> ${esc(hi.name)} (${esc(hi.prov||"")}) har ${fmtRate(hi.rate)} rente. Ekstra innbetalinger her sparer deg mest.</div></div>`:"";
 }
 function renderFilters(){
@@ -423,8 +477,8 @@ const QUICK={debt:[["Klarna","debt"],["Qliro","debt"],["Kredittkort","debt"],["W
   sub:[["Netflix","sub"],["Spotify","sub"],["HBO Max","sub"],["Viaplay","sub"],["iCloud","sub"],["Trening","sub"],["Mobil","fixed"],["Strøm","fixed"],["Husleie","fixed"],["Forsikring","fixed"]]};
 function renderList(){
   const list=$("list"); const f=filters[view];
-  const all=state.items.filter(inView);
-  if(!all.length){
+  const allIn=state.items.filter(inView), all=allIn.filter(i=>!i.done), doneItems=allIn.filter(i=>i.done);
+  if(!allIn.length){
     const q=QUICK[view];
     list.innerHTML=`<div class="empty"><h2>${view==="debt"?"👋 Legg inn gjelden din":"👋 Legg inn abonnementene dine"}</h2><p>${view==="debt"?"Ha Klarna, Qliro og nettbanken åpen ved siden av, og legg inn ett kjøp eller lån om gangen.":"Se gjennom kontoutskriften for de siste par månedene – der dukker abonnementene opp."} Trykk på en snarvei:</p>
     <div class="quick">${q.map(([n],k)=>`<button data-q="${k}" style="background:${provColor(n)}">${n}</button>`).join("")}</div></div>`;
@@ -432,46 +486,54 @@ function renderList(){
     return;
   }
   const items=all.filter(it=>f==="all"||(f==="shared"?it.shared:it.type===f));
-  if(!items.length){list.innerHTML=`<p style="color:var(--muted);text-align:center;margin:30px 16px">Ingenting her ennå.</p>`;return}
-  if(view==="debt"){
-    const groups={}; for(const it of items){const p=(it.prov||"Annet").trim()||"Annet";(groups[p]=groups[p]||[]).push(it)}
-    const ordered=Object.entries(groups).map(([p,arr])=>({p,arr,m:arr.reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0),d:arr.reduce((s,i)=>s+(+i.remaining||0)*myShare(i),0),o:arr.reduce((s,i)=>s+(+i.original||0)*myShare(i),0)})).sort((a,b)=>b.d-a.d||b.m-a.m);
-    list.innerHTML=ordered.map(g=>{const col=provColor(g.p);const pct=g.o&&g.d<=g.o?Math.round((1-g.d/g.o)*100):null;return `<section class="card">
-      <div class="card-h"><div class="logo" style="background:${col}">${esc(g.p.charAt(0).toUpperCase())}</div>
-        <div class="t"><b>${esc(g.p)}</b><span>${g.d?`${kr(g.d)} igjen`:`${g.arr.length} ting`}${pct!==null?` · ${pct} % nedbetalt`:""}</span></div>
-        <div class="s">${kr(g.m)}<small>per mnd</small></div></div>
-      ${pct!==null?`<div class="card-bar"><i style="width:${pct}%;background:${col}"></i></div>`:""}
-      ${g.arr.sort((a,b)=>(+b.monthly||0)-(+a.monthly||0)).map(it=>rowHtml(it,col)).join("")}</section>`}).join("");
-  }else{
-    const sec=(title,arr)=>{if(!arr.length)return"";const m=arr.reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
-      return `<section class="card sub-list"><div class="sub-sum">${title}<span>${kr(m)}/mnd · ${kr(m*12)}/år</span></div>
-      ${arr.sort((a,b)=>(+b.monthly||0)-(+a.monthly||0)).map(subRow).join("")}</section>`};
-    list.innerHTML=sec("🔁 Abonnementer",items.filter(i=>i.type==="sub"))+sec("🏠 Faste utgifter",items.filter(i=>i.type==="fixed"));
+  const doneHtml=doneItems.length&&f==="all"?`<section class="card done-card"><div class="sub-sum">${view==="debt"?"🎉 Ferdig betalt":"⏹️ Avsluttet"}<span>${doneItems.length} ${view==="debt"?"nedbetalt":"sagt opp"}</span></div>
+    ${doneItems.map(it=>`<div class="row"><button class="rm" data-id="${it.id}"><div class="l"><div class="nm">${esc(it.name)}</div><div class="mt"><span>${esc(it.prov||"")}</span>${it.doneAt?`<span>${new Date(it.doneAt+"-01").toLocaleDateString("nb-NO",{month:"long",year:"numeric"})}</span>`:""}</div></div><div class="r"><b>${it.type==="debt"&&it.original?kr(it.original*myShare(it)):"✓"}</b></div></button></div>`).join("")}</section>`:"";
+  if(!items.length){list.innerHTML=(all.length?`<p style="color:var(--muted);text-align:center;margin:30px 16px">Ingenting her ennå.</p>`:"")+doneHtml;bindRows(list);return}
+  const now=new Date(), today=now.getDate();
+  const B={over:[],week:[],later:[],nodate:[],paid:[]};
+  for(const it of items){
+    if(isPaid(it)){B.paid.push(it);continue}
+    const d=+it.day||0; if(!d){B.nodate.push(it);continue}
+    const dist=d-today; it._dist=dist;
+    if(dist<0)B.over.push(it); else if(dist<=7)B.week.push(it); else B.later.push(it);
   }
-  list.querySelectorAll(".row").forEach(r=>r.onclick=()=>openItem(r.dataset.id));
+  const byDist=(a,b)=>a._dist-b._dist||(+b.monthly||0)-(+a.monthly||0);
+  B.over.sort(byDist);B.week.sort(byDist);B.later.sort(byDist);
+  B.nodate.sort((a,b)=>(+b.monthly||0)-(+a.monthly||0));B.paid.sort((a,b)=>(+a.day||32)-(+b.day||32));
+  const sec=(title,arr,cls="")=>{if(!arr.length)return"";const m=arr.reduce((s,i)=>s+(isPaid(i)?+i.paid[YM()]:(+i.monthly||0))*myShare(i),0);
+    return `<section class="card ${cls}"><div class="sub-sum">${title}<span>${arr.length} ${arr.length===1?"betaling":"betalinger"} · ${kr(m)}</span></div>${arr.map(itemRow).join("")}</section>`};
+  list.innerHTML=sec("⚠️ Ikke krysset av",B.over,"over-card")+sec("⏰ Neste 7 dager",B.week)+sec(`📅 Senere i ${monthName()}`,B.later)+sec("📆 Uten fast dato",B.nodate)+sec(`✓ Betalt i ${monthName()}`,B.paid,"paid-card");
+  list.insertAdjacentHTML("beforeend",doneHtml);
+  bindRows(list);
 }
-const ICON={debt:"💳",sub:"🔁",fixed:"🏠"};
-function rowHtml(it,col){
-  const s=myShare(it),m=+it.monthly||0,rem=+it.remaining||0,orig=+it.original||0;
-  const mt=[];
-  if(it.shared) mt.push(`<span class="tag shared">💞 Delt ${Math.round(s*100)}/${Math.round((1-s)*100)}</span>`);
-  if(rem) mt.push(`<span>${kr(rem*s)} igjen</span>`);
-  const ml=monthsLeft(it); if(ml!==null) mt.push(`<span>${fmtMonths(ml)}</span>`);
-  if(it.rate) mt.push(`<span>${fmtRate(it.rate)}</span>`);
-  if(it.day) mt.push(`<span>den ${it.day}.</span>`);
-  const pct=orig&&rem<=orig?Math.round((1-rem/orig)*100):null;
-  return `<button class="row" data-id="${it.id}"><div class="ic">💳</div><div class="l"><div class="nm">${esc(it.name||"Uten navn")}</div><div class="mt">${mt.join("")}</div>
-    ${pct!==null?`<div class="prog" title="${pct} % nedbetalt"><i style="width:${pct}%;background:${col}"></i></div>`:""}</div>
-    <div class="r"><b>${kr(m*s)}</b>${it.shared?`<small>av ${kr(m)}</small>`:""}</div></button>`;
+function bindRows(list){
+  list.querySelectorAll(".rm").forEach(r=>r.onclick=()=>openItem(r.dataset.id));
+  list.querySelectorAll(".chk").forEach(c=>c.onclick=e=>{e.stopPropagation();togglePaid(c.dataset.pay)});
 }
-function subRow(it){
-  const s=myShare(it),m=+it.monthly||0,col=provColor(it.prov||it.name), label=(it.prov||it.name||"?").trim();
-  const mt=[];
+const chkBtn=it=>{const p=isPaid(it);return `<button class="chk" data-pay="${it.id}" aria-pressed="${p}" aria-label="${p?"Angre betalt":"Marker som betalt for "+monthName()}"><span>${CHECK}</span></button>`};
+function whenTxt(it){
+  if(isPaid(it)) return it.day?`Neste: ${it.day}. ${new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toLocaleDateString("nb-NO",{month:"short"})}`:"";
+  const d=+it.day||0; if(!d) return "";
+  const dist=d-new Date().getDate();
+  if(dist<0) return `<span class="when over">Forfalt den ${d}.</span>`;
+  if(dist===0) return `<span class="when soon">I dag</span>`;
+  if(dist===1) return `<span class="when soon">I morgen</span>`;
+  return `<span class="when ${dist<=3?"soon":""}">Om ${dist} dager · den ${d}.</span>`;
+}
+function itemRow(it){
+  const s=myShare(it),m=+it.monthly||0,rem=+it.remaining||0,orig=+it.original||0,p=isPaid(it);
+  const prov=(it.prov||it.name||"?").trim(), col=provColor(it.prov||it.name);
+  const mt=[]; const w=whenTxt(it); if(w) mt.push(w.startsWith("<")?w:`<span>${w}</span>`);
   if(it.prov&&it.prov!==it.name) mt.push(`<span>${esc(it.prov)}</span>`);
-  if(it.shared) mt.push(`<span class="tag shared">💞 Delt ${Math.round(s*100)}/${Math.round((1-s)*100)}</span>`);
-  if(it.day) mt.push(`<span>den ${it.day}.</span>`);
-  return `<button class="row" data-id="${it.id}"><div class="logo" style="background:${col};width:40px;height:40px;border-radius:13px;font-size:17px">${esc(label.charAt(0).toUpperCase())}</div><div class="l"><div class="nm">${esc(it.name||label)}</div><div class="mt">${mt.join("")}</div></div>
-    <div class="r"><b>${kr(m*s)}</b><small>${kr(m*s*12)}/år</small></div></button>`;
+  if(view==="sub"&&it.type==="fixed"&&filters.sub==="all") mt.push(`<span>Fast</span>`);
+  if(it.shared) mt.push(`<span class="tag shared">💞 ${Math.round(s*100)}/${Math.round((1-s)*100)}</span>`);
+  if(it.type==="debt"&&rem) mt.push(`<span>${kr(rem*s)} igjen</span>`);
+  if(it.type==="debt"){const ml=monthsLeft(it); if(ml!==null) mt.push(`<span>${fmtMonths(ml)}</span>`)}
+  const pct=it.type==="debt"&&orig&&rem<=orig?Math.round((1-rem/orig)*100):null;
+  const amt=(p?+it.paid[YM()]:m)*s;
+  return `<div class="row ${p?"paid":""}">${chkBtn(it)}<button class="rm" data-id="${it.id}"><div class="logo" style="background:${col};width:40px;height:40px;border-radius:13px;font-size:17px">${esc(prov.charAt(0).toUpperCase())}</div><div class="l"><div class="nm">${esc(it.name||prov)}</div><div class="mt">${mt.join("")}</div>
+    ${pct!==null?`<div class="prog" title="${pct} % nedbetalt"><i style="width:${pct}%;background:${col}"></i></div>`:""}</div>
+    <div class="r"><b>${kr(amt)}</b>${p?`<small class="pd">Betalt</small>`:it.shared?`<small>av ${kr(m)}</small>`:it.type!=="debt"?`<small>${kr(m*s*12)}/år</small>`:""}</div></button></div>`;
 }
 /* ---------- sheet ---------- */
 const dlg=$("dlg"); let curType="debt",curPayer="me";
@@ -491,6 +553,8 @@ function openItem(id,preset){
   $("fRate").value=numStr(it.rate); $("fShared").checked=!!it.shared; $("sharedBox").hidden=!it.shared;
   $("fShare").value=it.share??50; curPayer=it.payer||"me"; setSeg("payerSeg",curPayer); $("fNote").value=it.note||"";
   $("delBtn").hidden=!editing;
+  $("doneBtn").hidden=!editing;
+  if(editing) $("doneBtn").textContent=editing.done?"↩︎ Gjenåpne":(editing.type==="debt"?"✓ Marker som ferdig betalt":"⏹️ Marker som sagt opp");
   const provs=[...new Set([...state.items.map(i=>i.prov).filter(Boolean),"Klarna","Qliro","Kredittkort","Walley","Resurs"])].slice(0,10);
   $("provChips").innerHTML=provs.map(p=>`<button type="button" style="background:${provColor(p)}">${esc(p)}</button>`).join("");
   $("provChips").querySelectorAll("button").forEach(b=>b.onclick=()=>$("fProv").value=b.textContent);
@@ -507,6 +571,10 @@ $("saveBtn").onclick=()=>{
   const want=data.type==="debt"?"debt":"sub"; if(want!==view){view=want;try{history.replaceState(null,"",want==="sub"?"#abonnementer":"#gjeld")}catch(e){}}
   dlg.close(); save(); render();
 };
+$("doneBtn").onclick=()=>{if(!editing)return;
+  if(editing.done){editing.done=false;delete editing.doneAt;toast("Gjenåpnet")}
+  else{editing.done=true;editing.doneAt=YM();if(editing.type==="debt"){editing.remaining=0;toast(`🎉 ${editing.name} er nedbetalt!`)}else toast(`${editing.name} er sagt opp`)}
+  dlg.close();save();render()};
 $("delBtn").onclick=()=>{if(!editing||!confirm(`Slette «${editing.name}»?`))return;state.items=state.items.filter(i=>i!==editing);dlg.close();save();render()};
 $("cancelBtn").onclick=()=>dlg.close();
 dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
