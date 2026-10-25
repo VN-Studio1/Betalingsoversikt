@@ -212,7 +212,7 @@ dialog::backdrop{background:rgba(13,12,31,.55);backdrop-filter:blur(3px)}
   </section>
     <nav class="filters" id="filters" hidden aria-label="Filter"></nav>
   <main id="list"></main>
-  <p class="foot" id="saveStatus">Laster …</p>
+  <p class="foot"><span id="saveStatus">Laster …</span> · versjon 7</p>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -238,7 +238,11 @@ dialog::backdrop{background:rgba(13,12,31,.55);backdrop-filter:blur(3px)}
       </div>
       <div class="field"><label for="fRate">Effektiv rente</label><input id="fRate" type="text" inputmode="decimal" placeholder="% (valgfritt)"></div>
     </div>
-    <div class="field"><label for="fDay">Trekkes dag i måneden</label><input id="fDay" type="text" inputmode="numeric" placeholder="F.eks. 20"></div>
+    <div class="two">
+      <div class="field"><label for="fDay">Trekkdag</label><input id="fDay" type="text" inputmode="numeric" placeholder="F.eks. 20"></div>
+      <div class="field"><label for="fFrom">Første trekk</label><input id="fFrom" type="month"></div>
+    </div>
+    <p class="hint">«Første trekk» brukes når noe ikke skal betales før en senere måned, f.eks. en faktura med 30 dagers frist.</p>
     <label class="toggle"><span id="sharedLabel">Delt med partner</span><input type="checkbox" id="fShared"></label>
     <div class="sharedbox" id="sharedBox" hidden>
       <div class="field"><label for="fShare">Min andel (%)</label><input id="fShare" type="text" inputmode="numeric" value="50"></div>
@@ -339,6 +343,8 @@ function provColor(p){
 }
 const YM=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")};
 const inMonth=i=>!i.done||i.doneAt===YM();
+const dueNow=i=>!(i.from&&i.from>YM());
+const monthShort=ym=>new Date(ym+"-01T12:00").toLocaleDateString("nb-NO",{month:"short"});
 const isPaid=i=>!!(i.paid&&i.paid[YM()]!==undefined);
 const CHECK=`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("on"),2600)}
@@ -358,7 +364,7 @@ function togglePaid(id){
 }
 function paidStats(){
   let paid=0,total=0; const ym=YM();
-  for(const it of state.items.filter(inMonth)){ if(!inView(it))continue; const s=myShare(it);
+  for(const it of state.items.filter(inMonth)){ if(!inView(it)||!(dueNow(it)||isPaid(it)))continue; const s=myShare(it);
     const amt=it.paid&&it.paid[ym]!==undefined?(+it.paid[ym]||0):(+it.monthly||0);
     total+=amt*s; if(isPaid(it)) paid+=amt*s; }
   return {paid,total};
@@ -366,7 +372,7 @@ function paidStats(){
 function totals(){
   let monthlyMine=0,monthlyAll=0,debtMine=0,owed=0,subs=0,count=0;
   for(const it of state.items.filter(inMonth)){
-    const m=+it.monthly||0,s=myShare(it); count++;
+    const m=(dueNow(it)||isPaid(it))?(+it.monthly||0):0,s=myShare(it); count++;
     monthlyAll+=m; monthlyMine+=m*s;
     if(it.type==="sub") subs+=m*s;
     if(it.type==="debt") debtMine+=(+it.remaining||0)*s;
@@ -376,14 +382,13 @@ function totals(){
 }
 function monthsLeft(it){
   const r=+it.remaining||0,m=+it.monthly||0; if(!r||!m)return null;
-  const rate=(+it.rate||0)/100/12;
-  if(rate>0){ if(m<=r*rate) return Infinity; return Math.ceil(-Math.log(1-rate*r/m)/Math.log(1+rate)); }
-  return Math.ceil(r/m);
+  return Math.ceil(r/m-0.01);
 }
-function fmtMonths(n){
+function fmtMonths(n,off=0){
   if(n===null)return""; if(n===Infinity)return"Dekker ikke renten";
-  const d=new Date(); d.setMonth(d.getMonth()+n);
-  return n<=1?"Ferdig neste mnd":"Ferdig "+d.toLocaleDateString("nb-NO",{month:"short",year:"numeric"});
+  const k=n+off; if(k<=0)return"Siste betaling nå";
+  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()+k);
+  return k===1?"Ferdig neste mnd":"Ferdig "+d.toLocaleDateString("nb-NO",{month:"short",year:"numeric"});
 }
 const typeLabel={debt:"Gjeld",sub:"Abonnement",fixed:"Fast"};
 const typeCls={debt:"",sub:"sub",fixed:"fixed"};
@@ -432,7 +437,7 @@ function renderDebtHero(){
   const debts=state.items.filter(i=>i.type==="debt"&&inMonth(i));
   const by={}; for(const it of debts){const r=(+it.remaining||0)*myShare(it); if(r>0){const p=(it.prov||"Annet").trim(); by[p]=(by[p]||0)+r;}}
   const entries=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([p,v])=>[p,v,provColor(p)]);
-  const pay=debts.reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
+  const pay=debts.filter(i=>dueNow(i)||isPaid(i)).reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
   const anyShared=debts.some(i=>i.shared);
   let o=0; for(const it of debts){if(!it.shared)continue;const m=+it.monthly||0,s=myShare(it); if(it.payer==="partner")o-=m*s; else o+=m*(1-s)}
   h.innerHTML=`<div class="hero-top"><span class="t">💳 Gjeld</span><button class="icon-btn" id="settingsBtn" aria-label="Innstillinger">${gear}</button></div>
@@ -502,19 +507,20 @@ function renderList(){
     ${doneItems.map(it=>`<div class="row"><button class="rm" data-id="${it.id}"><div class="l"><div class="nm">${esc(it.name)}</div><div class="mt"><span>${esc(it.prov||"")}</span>${it.doneAt?`<span>${new Date(it.doneAt+"-01").toLocaleDateString("nb-NO",{month:"long",year:"numeric"})}</span>`:""}</div></div><div class="r"><b>${it.type==="debt"&&it.original?kr(it.original*myShare(it)):"✓"}</b></div></button></div>`).join("")}</section>`:"";
   if(!items.length){list.innerHTML=(all.length?`<p style="color:var(--muted);text-align:center;margin:30px 16px">Ingenting her ennå.</p>`:"")+doneHtml;bindRows(list);return}
   const now=new Date(), today=now.getDate();
-  const B={over:[],week:[],later:[],nodate:[],paid:[]};
+  const B={over:[],week:[],later:[],nodate:[],paid:[],future:[]};
   for(const it of items){
     if(isPaid(it)){B.paid.push(it);continue}
+    if(!dueNow(it)){B.future.push(it);continue}
     const d=+it.day||0; if(!d){B.nodate.push(it);continue}
     const dist=d-today; it._dist=dist;
     if(dist<0)B.over.push(it); else if(dist<=7)B.week.push(it); else B.later.push(it);
   }
   const byDist=(a,b)=>a._dist-b._dist||(+b.monthly||0)-(+a.monthly||0);
   B.over.sort(byDist);B.week.sort(byDist);B.later.sort(byDist);
-  B.nodate.sort((a,b)=>(+b.monthly||0)-(+a.monthly||0));B.paid.sort((a,b)=>(+a.day||32)-(+b.day||32));
+  B.future.sort((a,b)=>(a.from||"").localeCompare(b.from||"")||(+a.day||0)-(+b.day||0));B.nodate.sort((a,b)=>(+b.monthly||0)-(+a.monthly||0));B.paid.sort((a,b)=>(+a.day||32)-(+b.day||32));
   const sec=(title,arr,cls="")=>{if(!arr.length)return"";const m=arr.reduce((s,i)=>s+(isPaid(i)?+i.paid[YM()]:(+i.monthly||0))*myShare(i),0);
     return `<section class="card ${cls}"><div class="sub-sum">${title}<span>${arr.length} ${arr.length===1?"betaling":"betalinger"} · ${kr(m)}</span></div>${arr.map(itemRow).join("")}</section>`};
-  list.innerHTML=sec("⚠️ Ikke krysset av",B.over,"over-card")+sec("⏰ Neste 7 dager",B.week)+sec(`📅 Senere i ${monthName()}`,B.later)+sec("📆 Uten fast dato",B.nodate)+sec(`✓ Betalt i ${monthName()}`,B.paid,"paid-card");
+  list.innerHTML=sec("⚠️ Ikke krysset av",B.over,"over-card")+sec("⏰ Neste 7 dager",B.week)+sec(`📅 Senere i ${monthName()}`,B.later)+sec("📆 Uten fast dato",B.nodate)+sec("🗓️ Neste måned og senere",B.future)+sec(`✓ Betalt i ${monthName()}`,B.paid,"paid-card");
   list.insertAdjacentHTML("beforeend",doneHtml);
   bindRows(list);
 }
@@ -525,7 +531,9 @@ function bindRows(list){
 const chkBtn=it=>{const p=isPaid(it);return `<button class="chk" data-pay="${it.id}" aria-pressed="${p}" aria-label="${p?"Angre betalt":"Marker som betalt for "+monthName()}"><span>${CHECK}</span></button>`};
 function whenTxt(it){
   if(isPaid(it)) return it.day?`Neste: ${it.day}. ${new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toLocaleDateString("nb-NO",{month:"short"})}`:"";
-  const d=+it.day||0; if(!d) return "";
+  const d=+it.day||0;
+  if(!dueNow(it)) return d?`Forfaller ${d}. ${monthShort(it.from)}`:`Fra ${monthShort(it.from)}`;
+  if(!d) return "";
   const dist=d-new Date().getDate();
   if(dist<0) return `<span class="when over">Forfalt den ${d}.</span>`;
   if(dist===0) return `<span class="when soon">I dag</span>`;
@@ -540,7 +548,7 @@ function itemRow(it){
   if(view==="sub"&&it.type==="fixed"&&filters.sub==="all") mt.push(`<span>Fast</span>`);
   if(it.shared) mt.push(`<span class="tag shared">💞 ${Math.round(s*100)}/${Math.round((1-s)*100)}</span>`);
   if(it.type==="debt"&&rem) mt.push(`<span>${kr(rem*s)} igjen</span>`);
-  if(it.type==="debt"){const ml=monthsLeft(it); if(ml!==null) mt.push(`<span>${fmtMonths(ml)}</span>`)}
+  if(it.type==="debt"){const ml=monthsLeft(it); if(ml!==null) mt.push(`<span>${fmtMonths(ml,dueNow(it)&&!isPaid(it)?-1:0)}</span>`)}
   const pct=it.type==="debt"&&orig&&rem<=orig?Math.round((1-rem/orig)*100):null;
   const amt=(p?+it.paid[YM()]:m)*s;
   return `<div class="row ${p?"paid":""}">${chkBtn(it)}<button class="rm" data-id="${it.id}"><div class="logo" style="background:${col};width:40px;height:40px;border-radius:13px;font-size:17px">${esc(prov.charAt(0).toUpperCase())}</div><div class="l"><div class="nm">${esc(it.name||prov)}</div><div class="mt">${mt.join("")}</div>
@@ -561,7 +569,7 @@ function openItem(id,preset){
   $("dlgTitle").textContent=editing?"Endre":"Legg til";
   setType(it.type||"debt");
   $("fName").value=it.name||""; $("fProv").value=it.prov||""; $("fMonthly").value=numStr(it.monthly);
-  $("fDay").value=it.day||""; $("fRemaining").value=numStr(it.remaining); $("fOriginal").value=numStr(it.original);
+  $("fDay").value=it.day||""; $("fFrom").value=it.from||""; $("fRemaining").value=numStr(it.remaining); $("fOriginal").value=numStr(it.original);
   $("fRate").value=numStr(it.rate); $("fShared").checked=!!it.shared; $("sharedBox").hidden=!it.shared;
   $("fShare").value=it.share??50; curPayer=it.payer||"me"; setSeg("payerSeg",curPayer); $("fNote").value=it.note||"";
   $("delBtn").hidden=!editing;
@@ -578,7 +586,7 @@ $("saveBtn").onclick=()=>{
   if(!name){$("fName").focus();$("fName").placeholder="Skriv inn hva det er";return}
   const data={name,prov:$("fProv").value.trim(),type:curType,monthly:num($("fMonthly").value),day:Math.min(31,Math.max(0,parseInt($("fDay").value)||0))||null,
     remaining:curType==="debt"?num($("fRemaining").value):0,original:curType==="debt"?num($("fOriginal").value):0,rate:curType==="debt"?num($("fRate").value):0,
-    shared:$("fShared").checked,share:Math.min(100,Math.max(0,num($("fShare").value)||50)),payer:curPayer,note:$("fNote").value.trim()};
+    shared:$("fShared").checked,share:Math.min(100,Math.max(0,num($("fShare").value)||50)),payer:curPayer,note:$("fNote").value.trim(),from:$("fFrom").value||null};
   if(editing) Object.assign(editing,data); else state.items.push(Object.assign({id:uid()},data));
   const want=data.type==="debt"?"debt":"sub"; if(want!==view){view=want;try{history.replaceState(null,"",want==="sub"?"#abonnementer":"#gjeld")}catch(e){}}
   dlg.close(); save(); render();
@@ -633,6 +641,7 @@ function normItem(r){
     day:Math.min(31,Math.max(0,parseInt(r.day??r.dag)||0))||null,remaining:type==="debt"?n(r.remaining):0,original:type==="debt"?n(r.original):0,
     rate:type==="debt"?n(r.rate):0,shared:!!r.shared,share:Math.min(100,Math.max(0,n(r.share)||50)),payer:r.payer==="partner"?"partner":"me",note:String(r.note||"")};
   if(r.paid&&typeof r.paid==="object") it.paid=r.paid;
+  if(r.from&&/^\d{4}-\d{2}$/.test(r.from)) it.from=r.from;
   if(r.done){it.done=true; if(r.doneAt) it.doneAt=String(r.doneAt)}
   return it;
 }
@@ -652,7 +661,7 @@ function readJson(text){
 function applyImport(replace){
   if(!pending)return;
   if(replace) state.items=pending.items;
-  else{const ids=new Set(state.items.map(i=>i.id)); for(const it of pending.items){ if(ids.has(it.id)) it.id=uid(); state.items.push(it);} }
+  else{for(const it of pending.items){ const k=state.items.findIndex(i=>i.id===it.id); if(k>=0) state.items[k]=it; else state.items.push(it);} }
   if(pending.partner&&(replace||!state.partner)) state.partner=String(pending.partner);
   if(pending.income&&(replace||!state.income)) state.income=+pending.income||0;
   const c=pending.items.length; pending=null; $("importBox").hidden=true; $("jsonPaste").value="";
