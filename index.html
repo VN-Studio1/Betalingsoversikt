@@ -264,6 +264,18 @@ dialog::backdrop{background:rgba(13,12,31,.55);backdrop-filter:blur(3px)}
     <div class="field"><label for="sIncome">Netto inntekt per måned</label><input id="sIncome" type="text" inputmode="decimal" placeholder="Valgfritt – viser hva du har igjen"></div>
     <p class="hint">Alt lagres privat på kontoen din. Bare du ser det, selv om du deler lenken.</p>
     <div class="acts" style="flex-wrap:wrap">
+      <button type="button" class="btn" id="saveJsonBtn" style="flex-basis:100%">💾 Lagre backup (JSON)</button>
+      <button type="button" class="btn" id="loadJsonBtn" style="flex-basis:100%">📂 Last opp JSON</button>
+      <input type="file" id="jsonFile" accept=".json,application/json,text/plain" hidden>
+      <div id="importBox" hidden style="flex-basis:100%;background:var(--chip);border-radius:18px;padding:14px">
+        <p id="importInfo" style="margin:0 0 10px;font-weight:700"></p>
+        <div class="acts" style="margin:0"><button type="button" class="btn" id="impAdd" style="background:var(--surface)">Legg til</button><button type="button" class="btn primary" id="impReplace">Erstatt alt</button></div>
+      </div>
+      <details style="flex-basis:100%"><summary style="font-size:14px;font-weight:700;color:var(--muted);padding:6px 2px;cursor:pointer">Eller lim inn JSON-tekst</summary>
+        <div class="field" style="margin-top:8px"><textarea id="jsonPaste" placeholder='{"items":[…]}' style="min-height:100px;font-size:13px;font-family:ui-monospace,monospace"></textarea></div>
+        <button type="button" class="btn" id="pasteBtn" style="width:100%">Les inn teksten</button>
+      </details>
+      <p class="hint" id="jsonMsg" style="flex-basis:100%;margin:0"></p>
       <button type="button" class="btn" id="exportBtn" style="flex-basis:100%">Kopier oversikt som tekst</button>
       <button type="button" class="btn" id="setCancel">Avbryt</button>
       <button type="button" class="btn primary" id="setSave">Lagre</button>
@@ -584,7 +596,7 @@ window.addEventListener("hashchange",()=>{const v=location.hash==="#abonnementer
 
 /* ---------- settings ---------- */
 const setDlg=$("setDlg");
-function openSettings(){$("sPartner").value=state.partner||"";$("sIncome").value=numStr(state.income);setDlg.showModal()}
+function openSettings(){$("importBox").hidden=true;$("jsonMsg").textContent="";$("sPartner").value=state.partner||"";$("sIncome").value=numStr(state.income);setDlg.showModal()}
 setDlg.addEventListener("click",e=>{if(e.target===setDlg)setDlg.close()});
 $("setCancel").onclick=()=>setDlg.close();
 $("setSave").onclick=()=>{state.partner=$("sPartner").value.trim();state.income=num($("sIncome").value);setDlg.close();save();render()};
@@ -594,6 +606,63 @@ $("exportBtn").onclick=async()=>{
   try{await navigator.clipboard.writeText(lines.join("\n"));$("exportBtn").textContent="Kopiert"}catch(e){$("exportBtn").textContent="Kunne ikke kopiere"}
   setTimeout(()=>$("exportBtn").textContent="Kopier oversikt som tekst",1800);
 };
+/* ---------- JSON backup ---------- */
+function exportData(){return JSON.stringify({app:"gjeld-oversikt",version:1,exported:new Date().toISOString(),partner:state.partner||"",income:state.income||0,items:state.items},null,2)}
+$("saveJsonBtn").onclick=async()=>{
+  const data=exportData(), name=`oversikt-${new Date().toISOString().slice(0,10)}.json`;
+  const msg=$("jsonMsg"); msg.textContent="";
+  try{
+    const dl=await (window.claude?.use?.("downloads"));
+    if(dl){ await dl.save({filename:name,data}); msg.textContent="✓ Backup lagret"; return; }
+  }catch(e){ if(e?.code==="declined"){msg.textContent="Lagring avbrutt";return} }
+  try{
+    const url=URL.createObjectURL(new Blob([data],{type:"application/json"}));
+    const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000); msg.textContent="✓ Backup lagret";
+  }catch(e){
+    try{await navigator.clipboard.writeText(data);msg.textContent="Kunne ikke lagre fil – JSON er kopiert til utklippstavlen i stedet"}catch(_){msg.textContent="Kunne ikke lagre backup her"}
+  }
+};
+const TYPES={debt:"debt",gjeld:"debt",delbetaling:"debt",sub:"sub",abonnement:"sub",fixed:"fixed",fast:"fixed"};
+function normItem(r){
+  if(!r||typeof r!=="object")return null;
+  const n=v=>{const x=parseFloat(String(v??"").replace(/\s/g,"").replace(",","."));return isNaN(x)?0:x};
+  const type=TYPES[String(r.type||"").toLowerCase()]||((r.remaining||r.gjenstående)?"debt":"sub");
+  const name=String(r.name||r.navn||r.prov||"").trim(); if(!name)return null;
+  const it={id:String(r.id||uid()),name,prov:String(r.prov||r.leverandør||"").trim(),type,monthly:n(r.monthly??r.mnd),
+    day:Math.min(31,Math.max(0,parseInt(r.day??r.dag)||0))||null,remaining:type==="debt"?n(r.remaining):0,original:type==="debt"?n(r.original):0,
+    rate:type==="debt"?n(r.rate):0,shared:!!r.shared,share:Math.min(100,Math.max(0,n(r.share)||50)),payer:r.payer==="partner"?"partner":"me",note:String(r.note||"")};
+  if(r.paid&&typeof r.paid==="object") it.paid=r.paid;
+  if(r.done){it.done=true; if(r.doneAt) it.doneAt=String(r.doneAt)}
+  return it;
+}
+let pending=null;
+function readJson(text){
+  const msg=$("jsonMsg"); msg.textContent=""; $("importBox").hidden=true; pending=null;
+  let obj; try{obj=JSON.parse(text)}catch(e){msg.textContent="Filen er ikke gyldig JSON";return}
+  const raw=Array.isArray(obj)?obj:Array.isArray(obj?.items)?obj.items:null;
+  if(!raw){msg.textContent="Fant ingen liste med «items» i filen";return}
+  const items=raw.map(normItem).filter(Boolean);
+  if(!items.length){msg.textContent="Fant ingen gyldige betalinger i filen";return}
+  pending={items,partner:Array.isArray(obj)?null:obj.partner,income:Array.isArray(obj)?null:obj.income};
+  if(!state.items.length){applyImport(true);return}
+  $("importInfo").textContent=`Fant ${items.length} betalinger. Du har ${state.items.length} fra før.`;
+  $("importBox").hidden=false;
+}
+function applyImport(replace){
+  if(!pending)return;
+  if(replace) state.items=pending.items;
+  else{const ids=new Set(state.items.map(i=>i.id)); for(const it of pending.items){ if(ids.has(it.id)) it.id=uid(); state.items.push(it);} }
+  if(pending.partner&&(replace||!state.partner)) state.partner=String(pending.partner);
+  if(pending.income&&(replace||!state.income)) state.income=+pending.income||0;
+  const c=pending.items.length; pending=null; $("importBox").hidden=true; $("jsonPaste").value="";
+  counted=false; setDlg.close(); save(); render(); toast(`✓ ${c} betalinger lastet inn`);
+}
+$("loadJsonBtn").onclick=()=>$("jsonFile").click();
+$("jsonFile").onchange=e=>{const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>readJson(String(r.result)); r.onerror=()=>$("jsonMsg").textContent="Kunne ikke lese filen"; r.readAsText(f); e.target.value=""};
+$("pasteBtn").onclick=()=>readJson($("jsonPaste").value);
+$("impAdd").onclick=()=>applyImport(false);
+$("impReplace").onclick=()=>{if(confirm("Erstatte alt du har lagt inn med innholdet i filen?"))applyImport(true)};
 initStore();
 </script>
 </body>
