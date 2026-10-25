@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1A1650">
+<title>Oversikt – gjeld og faste betalinger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F1F0F7; --surface:#FFFFFF; --ink:#16163A; --muted:#6C6A8A; --line:#E6E4F0;
+  --hero:#1A1650; --hero2:#2B1D7A; --hero-ink:#FFFFFF; --hero-muted:#B9B4E6;
+  --accent:#5B3DF5; --warn:#C26A00; --warn-soft:#FFF0D9; --good:#15805A; --good-soft:#DCF5EA;
+  --shared:#B0258F; --shared-soft:#FCE4F5; --chip:#F1F0F7;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D0C1F; --surface:#17162F; --ink:#EEEDF8; --muted:#9A97BC; --line:#29274A;
+    --hero:#15123F; --hero2:#26186B; --hero-muted:#A9A3DC;
+    --accent:#8F7BFF; --warn:#F3B25C; --warn-soft:#33260F; --good:#5ED3A2; --good-soft:#0F3022;
+    --shared:#F08AD5; --shared-soft:#3A1534; --chip:#211F3D; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D0C1F; --surface:#17162F; --ink:#EEEDF8; --muted:#9A97BC; --line:#29274A;
+  --hero:#15123F; --hero2:#26186B; --hero-muted:#A9A3DC;
+  --accent:#8F7BFF; --warn:#F3B25C; --warn-soft:#33260F; --good:#5ED3A2; --good-soft:#0F3022;
+  --shared:#F08AD5; --shared-soft:#3A1534; --chip:#211F3D; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45;font-variant-numeric:tabular-nums}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--hero)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px;border-radius:8px}
+.app{max-width:520px;margin:0 auto;padding-bottom:130px}
+
+/* Hero */
+.hero{position:relative;overflow:hidden;color:var(--hero-ink);padding:18px 20px 26px;border-radius:0 0 34px 34px;
+  background:radial-gradient(120% 70% at 100% 0%,rgba(247,140,190,.45),transparent 55%),radial-gradient(90% 60% at 0% 100%,rgba(95,215,170,.35),transparent 60%),linear-gradient(160deg,var(--hero2),var(--hero))}
+.hero-top{display:flex;justify-content:space-between;align-items:center}
+.hero-top .t{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.icon-btn{width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;display:grid;place-items:center;backdrop-filter:blur(6px)}
+.icon-btn svg{width:20px;height:20px}
+.ring-wrap{position:relative;width:min(270px,74vw);aspect-ratio:1;margin:14px auto 4px}
+.ring-wrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring-wrap circle{fill:none;stroke-width:15;stroke-linecap:round}
+.ring-seg{transition:stroke-dasharray .9s cubic-bezier(.2,.8,.2,1)}
+.ring-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ring-c .l{font-size:14px;font-weight:600;color:var(--hero-muted)}
+.ring-c .big{font-size:clamp(38px,12vw,52px);font-weight:900;letter-spacing:-.045em;line-height:1;margin:4px 0 2px;white-space:nowrap}
+.ring-c .cur{font-size:15px;font-weight:700;color:var(--hero-muted)}
+.out{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:14px 16px;backdrop-filter:blur(8px)}
+.out .k{font-size:14px;color:var(--hero-muted);font-weight:500}
+.out .v{font-size:28px;font-weight:900;letter-spacing:-.03em;white-space:nowrap}
+.out .badge{font-size:13px;font-weight:700;background:#fff;color:var(--hero);border-radius:999px;padding:6px 11px;white-space:nowrap}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.mini>div{background:rgba(255,255,255,.08);border-radius:18px;padding:11px 14px}
+.mini .k{font-size:13px;color:var(--hero-muted)}
+.mini .v{font-size:19px;font-weight:800;margin-top:1px;white-space:nowrap}
+.mini .v.sh{color:#FFB8E6}
+.mini .v small{font-size:12px;font-weight:500;color:var(--hero-muted)}
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:4px}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;background:rgba(255,255,255,.1);border-radius:999px;padding:4px 10px 4px 6px}
+.legend b{width:12px;height:12px;border-radius:50%;display:inline-block}
+
+/* Sections */
+.sec{padding:0 16px;margin-top:26px}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 10px}
+.sec-h h2{margin:0;font-size:20px;font-weight:900;letter-spacing:-.02em}
+.sec-h span{font-size:14px;color:var(--muted);font-weight:600}
+.next{display:flex;gap:10px;overflow-x:auto;padding:2px 16px 8px;margin:0 -16px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.next::-webkit-scrollbar{display:none}
+.nx{flex:0 0 136px;scroll-snap-align:start;border-radius:22px;padding:13px 14px;color:#16163A;position:relative;overflow:hidden}
+.nx .d{font-size:34px;font-weight:900;letter-spacing:-.04em;line-height:1}
+.nx .when{font-size:12px;font-weight:700;opacity:.7;margin-top:2px}
+.nx .n{font-weight:700;font-size:14px;margin-top:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx .a{font-weight:900;font-size:18px}
+.nx.soon::after{content:"Snart";position:absolute;top:12px;right:12px;font-size:11px;font-weight:800;background:#16163A;color:#fff;border-radius:999px;padding:2px 8px}
+
+.filters{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:12px 16px;margin-top:14px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.filters button{flex:0 0 auto;border:0;background:var(--surface);padding:9px 15px;border-radius:999px;font-size:15px;font-weight:700;color:var(--muted);box-shadow:0 1px 0 var(--line)}
+.filters button[aria-pressed="true"]{background:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(91,61,245,.3)}
+
+.card{background:var(--surface);border-radius:26px;margin:0 16px 14px;overflow:hidden}
+.card-h{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.logo{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-weight:900;font-size:19px;color:#16163A;flex:0 0 auto}
+.card-h .t{flex:1;min-width:0}
+.card-h .t b{display:block;font-size:18px;font-weight:800;letter-spacing:-.01em}
+.card-h .t span{font-size:13px;color:var(--muted);font-weight:500}
+.card-h .s{text-align:right;font-weight:900;font-size:19px;white-space:nowrap;letter-spacing:-.02em}
+.card-h .s small{display:block;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0}
+.card-bar{height:6px;margin:0 16px 4px;border-radius:4px;background:var(--chip);overflow:hidden}
+.card-bar i{display:block;height:100%;border-radius:4px}
+.row{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:12px 16px;min-height:64px}
+.row+.row{border-top:1px solid var(--line)}
+.row:active{background:var(--chip)}
+.ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;flex:0 0 auto;background:var(--chip)}
+.row .l{flex:1;min-width:0}
+.row .nm{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .mt{font-size:13px;color:var(--muted);margin-top:2px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.row .r{text-align:right;white-space:nowrap}
+.row .r b{font-size:16px;font-weight:800}
+.row .r small{display:block;font-size:12px;color:var(--muted)}
+.tag{font-size:11px;font-weight:800;padding:2px 7px;border-radius:6px}
+.tag.shared{background:var(--shared-soft);color:var(--shared)}
+.prog{height:6px;background:var(--chip);border-radius:4px;overflow:hidden;margin-top:7px}
+.prog i{display:block;height:100%;border-radius:4px}
+
+.tip{margin:22px 16px 0;padding:14px 16px;border-radius:22px;background:var(--warn-soft);font-size:14px;display:flex;gap:12px;align-items:flex-start}
+.tip .e{font-size:22px;line-height:1}
+.tip b{color:var(--warn)}
+
+.empty{margin:24px 16px;background:var(--surface);border-radius:26px;padding:24px 20px}
+.empty h2{margin:0 0 6px;font-size:21px;font-weight:900}
+.empty p{color:var(--muted);margin:0 0 16px;font-size:15px}
+.quick{display:flex;flex-wrap:wrap;gap:8px}
+.quick button{border:0;border-radius:999px;padding:10px 15px;font-size:15px;font-weight:700;color:#16163A}
+.foot{text-align:center;font-size:12px;color:var(--muted);margin:26px 16px 0}
+
+.bottom{position:fixed;left:0;right:0;bottom:0;padding:14px 16px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,var(--bg) 55%,transparent);z-index:8;display:flex;justify-content:center;gap:10px}
+.tabbar{flex:1;max-width:420px;display:flex;gap:4px;background:var(--surface);border-radius:22px;padding:5px;box-shadow:0 8px 26px rgba(22,22,58,.16)}
+.tabbar button{flex:1;height:50px;border:0;border-radius:17px;background:transparent;font-size:14px;font-weight:800;color:var(--muted);white-space:nowrap}
+.tabbar button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.add{flex:0 0 60px;height:60px;border:0;border-radius:22px;background:linear-gradient(135deg,#7B5CFF,#5B3DF5 60%,#B0258F);color:#fff;display:grid;place-items:center;box-shadow:0 10px 28px rgba(91,61,245,.4)}
+.app.v-sub ~ .bottom .add{background:linear-gradient(135deg,#2BB3A3,#167A8C 60%,#2F5BD3);box-shadow:0 10px 28px rgba(22,122,140,.4)}
+.add svg{width:26px;height:26px}
+.hero.subs{background:radial-gradient(120% 70% at 100% 0%,rgba(245,207,134,.5),transparent 55%),radial-gradient(90% 60% at 0% 100%,rgba(143,211,218,.45),transparent 60%),linear-gradient(160deg,#0F5566,#0A2B3B)}
+.app.v-sub .filters button[aria-pressed="true"]{background:#167A8C;box-shadow:0 6px 16px rgba(22,122,140,.3)}
+.sub-list .row .r small{display:block}
+.sub-sum{display:flex;flex-direction:column;padding:14px 16px 6px;font-weight:900;font-size:18px}
+.sub-sum span{color:var(--muted);font-size:13px;font-weight:600}
+
+dialog{border:0;padding:0;margin:auto 0 0;width:100%;max-width:100%;max-height:92dvh;border-radius:30px 30px 0 0;background:var(--surface);color:var(--ink)}
+@media (min-width:560px){dialog{margin:auto;max-width:520px;border-radius:30px}}
+dialog[open]{animation:up .25s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(60px);opacity:.3}to{transform:none;opacity:1}}
+dialog::backdrop{background:rgba(13,12,31,.55);backdrop-filter:blur(3px)}
+.sheet{padding:10px 18px calc(18px + env(safe-area-inset-bottom,0px));max-height:92dvh;overflow:auto}
+.grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+.sheet h2{margin:0 0 16px;font-size:24px;font-weight:900;letter-spacing:-.02em}
+.seg{display:flex;gap:4px;background:var(--chip);border-radius:16px;padding:4px;margin-bottom:14px}
+.seg button{flex:1;border:0;background:transparent;padding:11px 4px;border-radius:12px;font-size:14px;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:14px;font-weight:700;color:var(--muted);margin:0 0 5px 2px}
+.field input,.field textarea{width:100%;border:2px solid transparent;background:var(--chip);border-radius:16px;padding:13px 14px;font-size:16px}
+.field input:focus,.field textarea:focus{border-color:var(--accent);outline:none;background:var(--surface)}
+.field textarea{min-height:56px;resize:vertical}
+.money{position:relative}
+.money input{font-size:30px;font-weight:900;padding-right:50px;letter-spacing:-.02em}
+.money span{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.provs{display:flex;gap:6px;overflow-x:auto;margin:-4px 0 12px;scrollbar-width:none}
+.provs::-webkit-scrollbar{display:none}
+.provs button{flex:0 0 auto;border:0;padding:7px 13px;border-radius:999px;font-size:14px;font-weight:700;color:#16163A}
+.toggle{display:flex;align-items:center;justify-content:space-between;background:var(--shared-soft);border-radius:16px;padding:13px 14px;margin-bottom:12px;font-weight:700}
+.toggle input{width:50px;height:30px;appearance:none;-webkit-appearance:none;background:var(--line);border-radius:999px;position:relative;transition:background .15s;flex:0 0 auto;margin:0}
+.toggle input::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.toggle input:checked{background:var(--shared)}
+.toggle input:checked::after{transform:translateX(20px)}
+.sharedbox{background:var(--shared-soft);border-radius:16px;padding:12px 12px 2px;margin:-6px 0 12px}
+.sharedbox .field input{background:var(--surface)}
+.sharedbox .seg{background:var(--surface)}
+.sharedbox .seg button[aria-pressed="true"]{background:var(--shared)}
+.acts{display:flex;gap:10px;margin-top:6px}
+.btn{flex:1;height:54px;border-radius:18px;border:0;font-weight:800;font-size:16px;background:var(--chip)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.danger{flex:0 0 auto;padding:0 18px;color:#D03535;background:transparent}
+.hint{font-size:13px;color:var(--muted);margin:-4px 2px 12px}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hero" id="hero"></header>
+  <div id="tipWrap"></div>
+  <section class="sec" id="nextSec" hidden>
+    <div class="sec-h"><h2>Neste trekk</h2><span id="nextSum"></span></div>
+    <div class="next" id="next"></div>
+  </section>
+    <nav class="filters" id="filters" hidden aria-label="Filter"></nav>
+  <main id="list"></main>
+  <p class="foot" id="saveStatus">Laster …</p>
+</div>
+
+<div class="bottom"><div class="tabbar" id="tabbar" role="tablist"><button role="tab" data-v="debt">💳 Gjeld</button><button role="tab" data-v="sub">🔁 Abonnementer</button></div><button class="add" id="addBtn" aria-label="Legg til"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
+
+<dialog id="dlg">
+  <form class="sheet" onsubmit="return false">
+    <div class="grab"></div>
+    <h2 id="dlgTitle">Legg til</h2>
+    <div class="seg" id="typeSeg">
+      <button type="button" data-v="debt">Gjeld</button>
+      <button type="button" data-v="sub">Abonnement</button>
+      <button type="button" data-v="fixed">Fast utgift</button>
+    </div>
+    <div class="field"><label for="fMonthly">Per måned</label><div class="money"><input id="fMonthly" type="text" inputmode="decimal" placeholder="0" autocomplete="off"><span>kr</span></div></div>
+    <div class="field"><label for="fName">Hva er det?</label><input id="fName" placeholder="F.eks. Sofa fra Bohus" autocomplete="off"></div>
+    <div class="field"><label for="fProv">Hvor</label><input id="fProv" placeholder="Klarna, Qliro, Netflix …" autocomplete="off"></div>
+    <div class="provs" id="provChips"></div>
+    <div id="debtFields">
+      <div class="two">
+        <div class="field"><label for="fRemaining">Igjen å betale</label><input id="fRemaining" type="text" inputmode="decimal" placeholder="kr"></div>
+        <div class="field"><label for="fOriginal">Opprinnelig</label><input id="fOriginal" type="text" inputmode="decimal" placeholder="kr (valgfritt)"></div>
+      </div>
+      <div class="field"><label for="fRate">Effektiv rente</label><input id="fRate" type="text" inputmode="decimal" placeholder="% (valgfritt)"></div>
+    </div>
+    <div class="field"><label for="fDay">Trekkes dag i måneden</label><input id="fDay" type="text" inputmode="numeric" placeholder="F.eks. 20"></div>
+    <label class="toggle"><span id="sharedLabel">Delt med partner</span><input type="checkbox" id="fShared"></label>
+    <div class="sharedbox" id="sharedBox" hidden>
+      <div class="field"><label for="fShare">Min andel (%)</label><input id="fShare" type="text" inputmode="numeric" value="50"></div>
+      <div class="field"><label>Hvem betaler regningen?</label>
+        <div class="seg" id="payerSeg"><button type="button" data-v="me">Meg</button><button type="button" data-v="partner" id="payerPartner">Partner</button></div>
+      </div>
+    </div>
+    <div class="field"><label for="fNote">Notat</label><textarea id="fNote" placeholder="Valgfritt"></textarea></div>
+    <div class="acts">
+      <button type="button" class="btn danger" id="delBtn">Slett</button>
+      <button type="button" class="btn" id="cancelBtn">Avbryt</button>
+      <button type="button" class="btn primary" id="saveBtn">Lagre</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="setDlg">
+  <form class="sheet" onsubmit="return false">
+    <div class="grab"></div>
+    <h2>Innstillinger</h2>
+    <div class="field"><label for="sPartner">Navn på partner</label><input id="sPartner" placeholder="Partner"></div>
+    <div class="field"><label for="sIncome">Netto inntekt per måned</label><input id="sIncome" type="text" inputmode="decimal" placeholder="Valgfritt – viser hva du har igjen"></div>
+    <p class="hint">Alt lagres privat på kontoen din. Bare du ser det, selv om du deler lenken.</p>
+    <div class="acts" style="flex-wrap:wrap">
+      <button type="button" class="btn" id="exportBtn" style="flex-basis:100%">Kopier oversikt som tekst</button>
+      <button type="button" class="btn" id="setCancel">Avbryt</button>
+      <button type="button" class="btn primary" id="setSave">Lagre</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const PALETTE=["#F7B5C9","#9FD8B8","#A9C4F0","#F5CF86","#C9B6F2","#F2A98F","#8FD3DA","#D8D27E","#E9B3E0","#B7C3CF"];
+const KNOWN={"klarna":"#F7B5C9","qliro":"#9FD8B8","kredittkort":"#A9C4F0","walley":"#F5CF86","resurs":"#C9B6F2","santander":"#F2A98F"};
+const nf=new Intl.NumberFormat("nb-NO",{maximumFractionDigits:0});
+const n0=v=>nf.format(Math.round(v||0));
+const kr=v=>n0(v)+" kr";
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+const $=id=>document.getElementById(id);
+
+let state={items:[],partner:"",income:0};
+let filter="all", editing=null, store=null;
+
+/* ---------- storage ---------- */
+const LS_KEY="gjeld-oversikt-v1";
+function lsGet(){try{const r=localStorage.getItem(LS_KEY);return r?JSON.parse(r):null}catch(e){return null}}
+function lsSet(v){try{localStorage.setItem(LS_KEY,JSON.stringify(v))}catch(e){}}
+const statusEl=$("saveStatus");
+async function initStore(){
+  const local=lsGet(); if(local) state=Object.assign(state,local);
+  render();
+  try{
+    const db=await (window.claude?.use?.("db")); const user=await (window.claude?.use?.("user"));
+    const id=user?await user.id():null;
+    if(db&&id){
+      const ref=db.collection("data/users/"+id).doc("oversikt");
+      const snap=await ref.get();
+      if(snap.exists) state=Object.assign({items:[],partner:"",income:0},snap.data());
+      else if(local&&local.items?.length) await ref.set(JSON.parse(JSON.stringify(state)));
+      store=ref; lsSet(state);
+      statusEl.textContent="Lagret privat på kontoen din"; render(); return;
+    }
+  }catch(e){}
+  statusEl.textContent="Lagret i denne nettleseren";
+}
+let saveT=null;
+function save(){
+  lsSet(state);
+  if(!store){statusEl.textContent="Lagret i denne nettleseren";return}
+  statusEl.textContent="Lagrer …"; clearTimeout(saveT);
+  saveT=setTimeout(async()=>{
+    try{await store.set(JSON.parse(JSON.stringify(state)));statusEl.textContent="Lagret privat på kontoen din"}
+    catch(e){statusEl.textContent=e?.code==="quota_exceeded"?"Lagringen er full – slett noe":"Kunne ikke lagre – prøv igjen"}
+  },400);
+}
+
+/* ---------- calc ---------- */
+const partnerName=()=>state.partner?.trim()||"Partner";
+const myShare=it=>it.shared?Math.min(100,Math.max(0,+it.share||50))/100:1;
+function provColor(p){
+  const k=(p||"Annet").trim().toLowerCase(); if(KNOWN[k])return KNOWN[k];
+  const provs=[...new Set(state.items.map(i=>(i.prov||"Annet").trim().toLowerCase()))].filter(x=>!KNOWN[x]);
+  const idx=provs.indexOf(k); return PALETTE[(idx<0?0:idx+6)%PALETTE.length];
+}
+function totals(){
+  let monthlyMine=0,monthlyAll=0,debtMine=0,owed=0,subs=0,count=0;
+  for(const it of state.items){
+    const m=+it.monthly||0,s=myShare(it); count++;
+    monthlyAll+=m; monthlyMine+=m*s;
+    if(it.type==="sub") subs+=m*s;
+    if(it.type==="debt") debtMine+=(+it.remaining||0)*s;
+    if(it.shared){ if(it.payer==="partner") owed-=m*s; else owed+=m*(1-s); }
+  }
+  return {monthlyMine,monthlyAll,debtMine,owed,subs,count};
+}
+function monthsLeft(it){
+  const r=+it.remaining||0,m=+it.monthly||0; if(!r||!m)return null;
+  const rate=(+it.rate||0)/100/12;
+  if(rate>0){ if(m<=r*rate) return Infinity; return Math.ceil(-Math.log(1-rate*r/m)/Math.log(1+rate)); }
+  return Math.ceil(r/m);
+}
+function fmtMonths(n){
+  if(n===null)return""; if(n===Infinity)return"Dekker ikke renten";
+  const d=new Date(); d.setMonth(d.getMonth()+n);
+  return n<=1?"Ferdig neste mnd":"Ferdig "+d.toLocaleDateString("nb-NO",{month:"short",year:"numeric"});
+}
+const typeLabel={debt:"Gjeld",sub:"Abonnement",fixed:"Fast"};
+const typeCls={debt:"",sub:"sub",fixed:"fixed"};
+const fmtRate=r=>String(r).replace(".",",")+" %";
+
+/* ---------- render ---------- */
+let view=location.hash==="#abonnementer"?"sub":"debt";
+const filters={debt:"all",sub:"all"};
+const inView=it=>view==="debt"?it.type==="debt":it.type!=="debt";
+function setView(v){
+  view=v; filters[v]=filters[v]||"all";
+  try{history.replaceState(null,"",v==="sub"?"#abonnementer":"#gjeld")}catch(e){}
+  counted=false; window.scrollTo({top:0}); render();
+}
+function render(){
+  $("sharedLabel").textContent="Delt med "+partnerName();
+  $("payerPartner").textContent=partnerName();
+  document.querySelector(".app").className="app v-"+view;
+  document.querySelectorAll("#tabbar button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===view?"true":"false"));
+  if(view==="debt") renderDebtHero(); else renderSubHero();
+  renderTip(); renderNext(); renderFilters(); renderList();
+}
+const gear=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
+const monthName=()=>new Date().toLocaleDateString("nb-NO",{month:"long"});
+function ring(entries,label,value){
+  const sum=entries.reduce((s,e)=>s+e[1],0), R=60, C=2*Math.PI*R, gap=entries.length>1?6:0; let off=0;
+  const segs=sum?entries.map(([p,v,c])=>{const len=Math.max(0,v/sum*C-gap);const el=`<circle class="ring-seg" r="${R}" cx="75" cy="75" stroke="${c}" stroke-dasharray="0 ${C}" data-d="${len} ${C-len}" stroke-dashoffset="${-off}"></circle>`;off+=v/sum*C;return el}).join(""):"";
+  return `<div class="ring-wrap"><svg viewBox="0 0 150 150" aria-hidden="true"><circle r="${R}" cx="75" cy="75" stroke="rgba(255,255,255,.12)"></circle>${segs}</svg>
+    <div class="ring-c"><div class="l">${label}</div><div class="big" id="bigNum" data-v="${Math.round(value)}">${n0(value)}</div><div class="cur">kroner</div></div></div>
+    ${sum?`<div class="legend">${entries.slice(0,8).map(([p,v,c])=>`<span><b style="background:${c}"></b>${esc(p)} ${kr(v)}</span>`).join("")}</div>`:""}`;
+}
+function heroDone(h){
+  $("settingsBtn").onclick=openSettings;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>h.querySelectorAll(".ring-seg").forEach(c=>c.setAttribute("stroke-dasharray",c.dataset.d))));
+  countUp();
+}
+function outBox(t){
+  const left=state.income>0?state.income-t.monthlyMine:null;
+  return `<div class="out"><div><div class="k">Totalt utgående i ${monthName()}</div><div class="v">${kr(t.monthlyMine)}</div></div>
+    ${left!==null?`<span class="badge">${left>=0?"Igjen":"Mangler"}: ${kr(Math.abs(left))}</span>`:""}</div>`;
+}
+function renderDebtHero(){
+  const t=totals(), h=$("hero"); h.className="hero";
+  const debts=state.items.filter(i=>i.type==="debt");
+  const by={}; for(const it of debts){const r=(+it.remaining||0)*myShare(it); if(r>0){const p=(it.prov||"Annet").trim(); by[p]=(by[p]||0)+r;}}
+  const entries=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([p,v])=>[p,v,provColor(p)]);
+  const pay=debts.reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
+  const anyShared=debts.some(i=>i.shared);
+  let o=0; for(const it of debts){if(!it.shared)continue;const m=+it.monthly||0,s=myShare(it); if(it.payer==="partner")o-=m*s; else o+=m*(1-s)}
+  h.innerHTML=`<div class="hero-top"><span class="t">💳 Gjeld</span><button class="icon-btn" id="settingsBtn" aria-label="Innstillinger">${gear}</button></div>
+    ${ring(entries,"Total gjeld",t.debtMine)}
+    ${outBox(t)}
+    ${debts.length?`<div class="mini">
+      <div><div class="k">💸 Til gjeld i ${monthName()}</div><div class="v">${kr(pay)}</div></div>
+      ${anyShared?`<div><div class="k">💞 ${o>=0?esc(partnerName())+" skylder deg":"Du skylder "+esc(partnerName())}</div><div class="v sh">${kr(Math.abs(o))}<small> /mnd</small></div></div>`
+      :`<div><div class="k">📄 Avtaler</div><div class="v">${debts.length}</div></div>`}</div>`:""}`;
+  heroDone(h);
+}
+function renderSubHero(){
+  const t=totals(), h=$("hero"); h.className="hero subs";
+  const its=state.items.filter(i=>i.type!=="debt");
+  const subs=its.filter(i=>i.type==="sub").reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
+  const fixed=its.filter(i=>i.type==="fixed").reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
+  const entries=its.map(i=>[i.name||i.prov||"Annet",(+i.monthly||0)*myShare(i),provColor(i.prov||i.name)]).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
+  h.innerHTML=`<div class="hero-top"><span class="t">🔁 Abonnementer og faste</span><button class="icon-btn" id="settingsBtn" aria-label="Innstillinger">${gear}</button></div>
+    ${ring(entries,"Per måned",subs+fixed)}
+    ${outBox(t)}
+    ${its.length?`<div class="mini">
+      <div><div class="k">🔁 Abonnementer</div><div class="v">${kr(subs)}<small> /mnd</small></div></div>
+      <div><div class="k">🏠 Faste utgifter</div><div class="v">${kr(fixed)}<small> /mnd</small></div></div></div>
+      <div class="mini" style="grid-template-columns:1fr"><div><div class="k">📆 Det blir i året</div><div class="v">${kr((subs+fixed)*12)}</div></div></div>`:""}`;
+  heroDone(h);
+}
+let counted=false;
+function countUp(){
+  const el=$("bigNum"); if(!el||counted||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const target=+el.dataset.v; if(!target)return; counted=true; const t0=performance.now(), dur=900;
+  const step=now=>{const p=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-p,3); el.textContent=n0(target*e); if(p<1)requestAnimationFrame(step)};
+  requestAnimationFrame(step);
+}
+function renderNext(){
+  const withDay=state.items.filter(i=>inView(i)&&+i.day>=1&&+i.monthly>0&&!(i.shared&&i.payer==="partner"));
+  const sec=$("nextSec"); if(!withDay.length){sec.hidden=true;return} sec.hidden=false;
+  const now=new Date(),today=now.getDate(),dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const rows=withDay.map(i=>{const d=Math.min(+i.day,dim);const dist=d>=today?d-today:d+dim-today;return{i,d,dist}}).sort((a,b)=>a.dist-b.dist);
+  const week=rows.filter(r=>r.dist<=7).reduce((s,r)=>s+(+r.i.monthly||0),0);
+  $("nextSum").textContent=week?`${kr(week)} neste 7 dager`:"";
+  $("next").innerHTML=rows.slice(0,10).map(({i,d,dist})=>`<div class="nx ${dist<=3?"soon":""}" style="background:${provColor(i.prov||i.name)}"><div class="d">${d}.</div><div class="when">${dist===0?"I dag":dist===1?"I morgen":`Om ${dist} dager`}</div><div class="n">${esc(i.name)}</div><div class="a">${kr(i.monthly)}</div></div>`).join("");
+}
+function renderTip(){
+  const hi=view==="debt"&&state.items.filter(i=>i.type==="debt"&&(+i.rate||0)>=15&&(+i.remaining||0)>0).sort((a,b)=>(+b.rate)-(+a.rate))[0];
+  $("tipWrap").innerHTML=hi?`<div class="tip"><span class="e">🔥</span><div><b>Dyrest først:</b> ${esc(hi.name)} (${esc(hi.prov||"")}) har ${fmtRate(hi.rate)} rente. Ekstra innbetalinger her sparer deg mest.</div></div>`:"";
+}
+function renderFilters(){
+  const nav=$("filters"); const opts=view==="debt"?[["all","Alle"],["shared","💞 Delt"]]:[["all","Alle"],["sub","🔁 Abonnementer"],["fixed","🏠 Faste"],["shared","💞 Delt"]];
+  if(!state.items.some(inView)){nav.hidden=true;return} nav.hidden=false;
+  nav.innerHTML=opts.map(([v,l])=>`<button data-f="${v}" aria-pressed="${filters[view]===v}">${l}</button>`).join("");
+  nav.querySelectorAll("button").forEach(b=>b.onclick=()=>{filters[view]=b.dataset.f;renderFilters();renderList()});
+}
+const QUICK={debt:[["Klarna","debt"],["Qliro","debt"],["Kredittkort","debt"],["Walley","debt"],["Resurs","debt"],["Santander","debt"]],
+  sub:[["Netflix","sub"],["Spotify","sub"],["HBO Max","sub"],["Viaplay","sub"],["iCloud","sub"],["Trening","sub"],["Mobil","fixed"],["Strøm","fixed"],["Husleie","fixed"],["Forsikring","fixed"]]};
+function renderList(){
+  const list=$("list"); const f=filters[view];
+  const all=state.items.filter(inView);
+  if(!all.length){
+    const q=QUICK[view];
+    list.innerHTML=`<div class="empty"><h2>${view==="debt"?"👋 Legg inn gjelden din":"👋 Legg inn abonnementene dine"}</h2><p>${view==="debt"?"Ha Klarna, Qliro og nettbanken åpen ved siden av, og legg inn ett kjøp eller lån om gangen.":"Se gjennom kontoutskriften for de siste par månedene – der dukker abonnementene opp."} Trykk på en snarvei:</p>
+    <div class="quick">${q.map(([n],k)=>`<button data-q="${k}" style="background:${provColor(n)}">${n}</button>`).join("")}</div></div>`;
+    list.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{const [n,t]=q[+b.dataset.q];openItem(null,{prov:n,type:t,name:t==="debt"?"":n})});
+    return;
+  }
+  const items=all.filter(it=>f==="all"||(f==="shared"?it.shared:it.type===f));
+  if(!items.length){list.innerHTML=`<p style="color:var(--muted);text-align:center;margin:30px 16px">Ingenting her ennå.</p>`;return}
+  if(view==="debt"){
+    const groups={}; for(const it of items){const p=(it.prov||"Annet").trim()||"Annet";(groups[p]=groups[p]||[]).push(it)}
+    const ordered=Object.entries(groups).map(([p,arr])=>({p,arr,m:arr.reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0),d:arr.reduce((s,i)=>s+(+i.remaining||0)*myShare(i),0),o:arr.reduce((s,i)=>s+(+i.original||0)*myShare(i),0)})).sort((a,b)=>b.d-a.d||b.m-a.m);
+    list.innerHTML=ordered.map(g=>{const col=provColor(g.p);const pct=g.o&&g.d<=g.o?Math.round((1-g.d/g.o)*100):null;return `<section class="card">
+      <div class="card-h"><div class="logo" style="background:${col}">${esc(g.p.charAt(0).toUpperCase())}</div>
+        <div class="t"><b>${esc(g.p)}</b><span>${g.d?`${kr(g.d)} igjen`:`${g.arr.length} ting`}${pct!==null?` · ${pct} % nedbetalt`:""}</span></div>
+        <div class="s">${kr(g.m)}<small>per mnd</small></div></div>
+      ${pct!==null?`<div class="card-bar"><i style="width:${pct}%;background:${col}"></i></div>`:""}
+      ${g.arr.sort((a,b)=>(+b.monthly||0)-(+a.monthly||0)).map(it=>rowHtml(it,col)).join("")}</section>`}).join("");
+  }else{
+    const sec=(title,arr)=>{if(!arr.length)return"";const m=arr.reduce((s,i)=>s+(+i.monthly||0)*myShare(i),0);
+      return `<section class="card sub-list"><div class="sub-sum">${title}<span>${kr(m)}/mnd · ${kr(m*12)}/år</span></div>
+      ${arr.sort((a,b)=>(+b.monthly||0)-(+a.monthly||0)).map(subRow).join("")}</section>`};
+    list.innerHTML=sec("🔁 Abonnementer",items.filter(i=>i.type==="sub"))+sec("🏠 Faste utgifter",items.filter(i=>i.type==="fixed"));
+  }
+  list.querySelectorAll(".row").forEach(r=>r.onclick=()=>openItem(r.dataset.id));
+}
+const ICON={debt:"💳",sub:"🔁",fixed:"🏠"};
+function rowHtml(it,col){
+  const s=myShare(it),m=+it.monthly||0,rem=+it.remaining||0,orig=+it.original||0;
+  const mt=[];
+  if(it.shared) mt.push(`<span class="tag shared">💞 Delt ${Math.round(s*100)}/${Math.round((1-s)*100)}</span>`);
+  if(rem) mt.push(`<span>${kr(rem*s)} igjen</span>`);
+  const ml=monthsLeft(it); if(ml!==null) mt.push(`<span>${fmtMonths(ml)}</span>`);
+  if(it.rate) mt.push(`<span>${fmtRate(it.rate)}</span>`);
+  if(it.day) mt.push(`<span>den ${it.day}.</span>`);
+  const pct=orig&&rem<=orig?Math.round((1-rem/orig)*100):null;
+  return `<button class="row" data-id="${it.id}"><div class="ic">💳</div><div class="l"><div class="nm">${esc(it.name||"Uten navn")}</div><div class="mt">${mt.join("")}</div>
+    ${pct!==null?`<div class="prog" title="${pct} % nedbetalt"><i style="width:${pct}%;background:${col}"></i></div>`:""}</div>
+    <div class="r"><b>${kr(m*s)}</b>${it.shared?`<small>av ${kr(m)}</small>`:""}</div></button>`;
+}
+function subRow(it){
+  const s=myShare(it),m=+it.monthly||0,col=provColor(it.prov||it.name), label=(it.prov||it.name||"?").trim();
+  const mt=[];
+  if(it.prov&&it.prov!==it.name) mt.push(`<span>${esc(it.prov)}</span>`);
+  if(it.shared) mt.push(`<span class="tag shared">💞 Delt ${Math.round(s*100)}/${Math.round((1-s)*100)}</span>`);
+  if(it.day) mt.push(`<span>den ${it.day}.</span>`);
+  return `<button class="row" data-id="${it.id}"><div class="logo" style="background:${col};width:40px;height:40px;border-radius:13px;font-size:17px">${esc(label.charAt(0).toUpperCase())}</div><div class="l"><div class="nm">${esc(it.name||label)}</div><div class="mt">${mt.join("")}</div></div>
+    <div class="r"><b>${kr(m*s)}</b><small>${kr(m*s*12)}/år</small></div></button>`;
+}
+/* ---------- sheet ---------- */
+const dlg=$("dlg"); let curType="debt",curPayer="me";
+function setSeg(id,v){document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v?"true":"false"))}
+function setType(v){curType=v;setSeg("typeSeg",v);$("debtFields").hidden=v!=="debt"}
+document.querySelectorAll("#typeSeg button").forEach(b=>b.onclick=()=>setType(b.dataset.v));
+document.querySelectorAll("#payerSeg button").forEach(b=>b.onclick=()=>{curPayer=b.dataset.v;setSeg("payerSeg",curPayer)});
+$("fShared").onchange=()=>$("sharedBox").hidden=!$("fShared").checked;
+const numStr=v=>v===undefined||v===null||v===0||v===""?"":String(v).replace(".",",");
+function openItem(id,preset){
+  editing=id?state.items.find(i=>i.id===id):null;
+  const it=editing||Object.assign({type:"debt",share:50,payer:"me"},preset||{});
+  $("dlgTitle").textContent=editing?"Endre":"Legg til";
+  setType(it.type||"debt");
+  $("fName").value=it.name||""; $("fProv").value=it.prov||""; $("fMonthly").value=numStr(it.monthly);
+  $("fDay").value=it.day||""; $("fRemaining").value=numStr(it.remaining); $("fOriginal").value=numStr(it.original);
+  $("fRate").value=numStr(it.rate); $("fShared").checked=!!it.shared; $("sharedBox").hidden=!it.shared;
+  $("fShare").value=it.share??50; curPayer=it.payer||"me"; setSeg("payerSeg",curPayer); $("fNote").value=it.note||"";
+  $("delBtn").hidden=!editing;
+  const provs=[...new Set([...state.items.map(i=>i.prov).filter(Boolean),"Klarna","Qliro","Kredittkort","Walley","Resurs"])].slice(0,10);
+  $("provChips").innerHTML=provs.map(p=>`<button type="button" style="background:${provColor(p)}">${esc(p)}</button>`).join("");
+  $("provChips").querySelectorAll("button").forEach(b=>b.onclick=()=>$("fProv").value=b.textContent);
+  dlg.showModal(); dlg.querySelector(".sheet").scrollTop=0;
+}
+const num=v=>{const n=parseFloat(String(v).replace(/\s/g,"").replace(",","."));return isNaN(n)?0:n};
+$("saveBtn").onclick=()=>{
+  const name=$("fName").value.trim()||$("fProv").value.trim();
+  if(!name){$("fName").focus();$("fName").placeholder="Skriv inn hva det er";return}
+  const data={name,prov:$("fProv").value.trim(),type:curType,monthly:num($("fMonthly").value),day:Math.min(31,Math.max(0,parseInt($("fDay").value)||0))||null,
+    remaining:curType==="debt"?num($("fRemaining").value):0,original:curType==="debt"?num($("fOriginal").value):0,rate:curType==="debt"?num($("fRate").value):0,
+    shared:$("fShared").checked,share:Math.min(100,Math.max(0,num($("fShare").value)||50)),payer:curPayer,note:$("fNote").value.trim()};
+  if(editing) Object.assign(editing,data); else state.items.push(Object.assign({id:uid()},data));
+  const want=data.type==="debt"?"debt":"sub"; if(want!==view){view=want;try{history.replaceState(null,"",want==="sub"?"#abonnementer":"#gjeld")}catch(e){}}
+  dlg.close(); save(); render();
+};
+$("delBtn").onclick=()=>{if(!editing||!confirm(`Slette «${editing.name}»?`))return;state.items=state.items.filter(i=>i!==editing);dlg.close();save();render()};
+$("cancelBtn").onclick=()=>dlg.close();
+dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
+$("addBtn").onclick=()=>openItem(null,{type:view==="debt"?"debt":"sub"});
+document.querySelectorAll("#tabbar button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
+window.addEventListener("hashchange",()=>{const v=location.hash==="#abonnementer"?"sub":"debt";if(v!==view)setView(v)});
+
+/* ---------- settings ---------- */
+const setDlg=$("setDlg");
+function openSettings(){$("sPartner").value=state.partner||"";$("sIncome").value=numStr(state.income);setDlg.showModal()}
+setDlg.addEventListener("click",e=>{if(e.target===setDlg)setDlg.close()});
+$("setCancel").onclick=()=>setDlg.close();
+$("setSave").onclick=()=>{state.partner=$("sPartner").value.trim();state.income=num($("sIncome").value);setDlg.close();save();render()};
+$("exportBtn").onclick=async()=>{
+  const t=totals(); const lines=[`Oversikt ${new Date().toLocaleDateString("nb-NO")}`,`Per måned (min del): ${kr(t.monthlyMine)}`,`Gjeld igjen (min del): ${kr(t.debtMine)}`,""];
+  for(const it of state.items) lines.push(`${it.prov||"Annet"} – ${it.name}: ${kr(it.monthly)}/mnd${it.type==="debt"&&it.remaining?`, ${kr(it.remaining)} igjen`:""}${it.shared?` (delt, min andel ${it.share} %)`:""}`);
+  try{await navigator.clipboard.writeText(lines.join("\n"));$("exportBtn").textContent="Kopiert"}catch(e){$("exportBtn").textContent="Kunne ikke kopiere"}
+  setTimeout(()=>$("exportBtn").textContent="Kopier oversikt som tekst",1800);
+};
+initStore();
+</script>
+</body>
+</html>
